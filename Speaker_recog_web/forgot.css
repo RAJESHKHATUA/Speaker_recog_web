@@ -1,0 +1,81 @@
+/* Forgot Password Page */
+.forgot-password-page {
+    background: linear-gradient(135deg, #8A2BE2, #FF1493, #00BFFF);
+    background-size: 400% 400%;
+    animation: gradientAnimation 10s ease infinite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: url('images/n7.jpg') no-repeat center center/cover;
+    color: #333;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Back to Login Link */
+.back-to-login {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+.back-to-login:hover {
+    color: #35f3e3; /* Pink */
+}
+
+/* Forgot Password Container */
+.forgot-password-container {
+    background: #aedbf8e6;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 80%;
+    text-align: center;
+}
+
+.forgot-password-container h2 {
+    color: #8A2BE2; /* Purple */
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.forgot-password-container p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 1.5rem;
+}
+
+/* Forgot Password Form */
+#forgotPasswordForm input[type="email"],
+#forgotPasswordForm input[type="submit"] {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    outline: none;
+}
+
+#forgotPasswordForm input[type="email"] {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+#forgotPasswordForm input[type="submit"] {
+    background: #8A2BE2; /* Purple */
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#forgotPasswordForm input[type="submit"]:hover {
+    background: #FF1493; /* Pink */
+}

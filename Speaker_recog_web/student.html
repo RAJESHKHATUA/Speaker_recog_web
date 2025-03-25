@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="student.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="dashboard-header">
+        <h1>Student Dashboard</h1>
+    </header>
+
+    <div class="option-grid">
+        <div class="option-card" onclick="location.href='enroll.html'">
+            <i class="fas fa-microphone-alt"></i>
+            <h3>Voice Enrollment</h3>
+            <p>Register your voice signature</p>
+        </div>
+        <div class="option-card" onclick="location.href='attendance.html'">
+            <i class="fas fa-calendar-check"></i>
+            <h3>Attendance Records</h3>
+            <p>View your attendance history</p>
+        </div>
+        <div class="option-card" onclick="location.href='courses.html'">
+            <i class="fas fa-book-open"></i>
+            <h3>My Courses</h3>
+            <p>Access your course materials</p>
+        </div>
+    </div>
+
+    <script src="student.js"></script>
+</body>
+</html>

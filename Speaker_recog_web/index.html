@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Home - Voice Enrollment</title>
+    <link rel="stylesheet" href="Home.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head> 
+<body class="home-page">
+    
+    <!-- Navigation Bar -->
+<!-- Navigation Bar -->
+<header class="navbar">
+    <img src="images/logo1.jpeg" alt="Logo" class="logo">
+    
+
+    <!-- Navigation Links -->
+    <nav id="nav-menu" class="nav-links">
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Features</a></li>
+            <li><a href="#">Implementation</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="button-container">
+        <a href="login.html" class="login-button">Login</a>
+    </div>
+</header>
+
+    <!-- Project Title -->
+    <div class="project-title">
+        <h1>Speaker Recognition System</h1>
+    </div>
+
+    <!-- Details Section -->
+    <div class="details-section">
+        <h2>How It Works</h2>
+        <p>
+            The Voice Enrollment System allows users to securely authenticate using their voice.
+            Simply record your voice by reading a set of phrases, and the system will create a unique voiceprint for you.
+        </p>
+        <h2>Purpose</h2>
+        <p>
+            This project is designed to provide a secure and convenient way to authenticate users using biometric voice recognition.
+            It can be used for attendance tracking, secure logins, and more.
+        </p>
+    </div>
+
+    <!-- Login Popup -->
+    <div id="loginPopup" class="popup-container">
+        <div class="popup-content">
+          <span class="close-btn">&times;</span>
+          <h2>Login</h2>
+          <form class="auth-form">
+            <input type="hidden" id="userTypeField" name="user_type" value="">
+            <input type="text" placeholder="Username" required>
+            <input type="password" placeholder="Password" required>
+            <a href="#" class="forgot-password">Forgot Password?</a>
+            <button type="button" onclick="window.location.href='student.html'">Login</button>
+            
+            <!-- Add this signup prompt -->
+            <div class="signup-prompt">
+              Don't have an account? 
+              <a href="#" class="signup-link">Create Account</a>
+            </div>
+          </form>
+        </div>
+      </div>
+  
+  <!-- Signup Popup -->
+  <div id="signupPopup" class="popup-container">
+    <div class="popup-content">
+      <span class="close-btn">&times;</span>
+      <h2>Sign Up</h2>
+      <form class="auth-form">
+        <input type="text" placeholder="Full Name" required>
+        <input type="email" placeholder="Email" required>
+        <input type="password" placeholder="Password" required>
+        <input type="password" placeholder="Confirm Password" required>
+        <button type="submit">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Type Selection Popup -->
+<div id="userTypePopup" class="popup-container">
+    <div class="popup-content">
+      <h2>Welcome</h2>
+      <div class="user-type-options">
+        <div class="user-type-card" id="facultyLoginBtn">
+          <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Faculty">
+          <h3>Faculty Login</h3>
+        </div>
+        <div class="user-type-card" id="studentLoginBtn">
+          <img src="https://cdn-icons-png.flaticon.com/512/3135/3135768.png" alt="Student">
+          <h3>Student Login</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Add this right before </body> -->
+<a href="#" class="mobile-login-button" id="mobileLoginBtn">Login</a>
+  <script src="home.js"></script>
+</body>
+</html>

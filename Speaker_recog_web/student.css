@@ -1,0 +1,70 @@
+/* Shared Dashboard Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, #8A2BE2, #4B0082);
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.option-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.option-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-align: center;
+    border: 2px solid #e0e0e0;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(138, 43, 226, 0.2);
+    border-color: #8A2BE2;
+}
+
+.option-card i {
+    font-size: 2.5rem;
+    color: #8A2BE2;
+    margin-bottom: 1rem;
+}
+
+.option-card h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.option-card p {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Faculty-specific styles */
+.faculty-option {
+    border-color: #FF5733;
+}
+
+.faculty-option:hover {
+    border-color: #FF1493;
+}
+
+.faculty-option i {
+    color: #FF5733;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .option-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+}
