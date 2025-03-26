@@ -1,4 +1,69 @@
-// Sentences Data
+// ================== GOOGLE DRIVE AUTHENTICATION ==================
+
+// Replace with your Google API credentials
+const CLIENT_ID = "961655146073-qeh6gs3va79snri2up74gdm8775o3m46.apps.googleusercontent.com";  // Replace this
+const API_KEY = "AIzaSyC7ZeVGhMnW_dzmCVUPFrDJRT7T87luEEA";  // Replace this
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+function handleClientLoad() {
+    gapi.load("client:auth2", initClient);
+}
+
+function initClient() {
+    gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        discoveryDocs: DISCOVERY_DOCS,
+        scope: SCOPES
+    }).then(() => {
+        console.log("Google API initialized.");
+    }).catch((error) => {
+        console.error("Google API initialization failed:", error);
+    });
+}
+
+function authenticate() {
+    return gapi.auth2.getAuthInstance().signIn().then(() => {
+        console.log("User signed in");
+    }).catch((error) => {
+        console.error("Authentication error:", error);
+    });
+}
+
+async function uploadToDrive(blob, fileName) {
+    try {
+        await authenticate();
+        const accessToken = gapi.auth.getToken().access_token;
+
+        const metadata = {
+            name: fileName,
+            mimeType: "audio/wav",
+            parents: ["YOUR_FOLDER_ID"] // Replace with your Google Drive Folder ID
+        };
+
+        const formData = new FormData();
+        formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+        formData.append("file", blob);
+
+        const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+            method: "POST",
+            headers: new Headers({ Authorization: "Bearer " + accessToken }),
+            body: formData
+        });
+
+        const data = await response.json();
+        console.log("Uploaded file ID:", data.id);
+    } catch (error) {
+        console.error("Error uploading file:", error);
+    }
+}
+
+function getRollNumber() {
+    return prompt("Enter your Roll Number:");
+}
+
+// ================== SENTENCES DATA & RECORDING ==================
 const sentences = [
     "Hello, my name is [Name].",
     "I am [Name], present today.",
@@ -103,24 +168,23 @@ function checkCompletion() {
     document.getElementById("submitVoice").disabled = !complete;
 }
 
-// Submit Handler
-document.getElementById("submitVoice").addEventListener("click", () => {
-    const formData = new FormData();
-    recordings.forEach((blob, index) => {
-        formData.append(`recording-${index}`, blob, `recording-${index}.wav`);
-    });
+// Submit Handler - Upload to Google Drive
+document.getElementById("submitVoice").addEventListener("click", async () => {
+    const rollNumber = getRollNumber();
+    if (!rollNumber) {
+        alert("Roll Number is required!");
+        return;
+    }
 
-    // Simulated submission
-    fetch("/submit-recordings", {
-        method: "POST",
-        body: formData,
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            alert("All recordings submitted successfully!");
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            alert("Failed to submit recordings. Please try again.");
-        });
+    for (let i = 0; i < recordings.length; i++) {
+        if (recordings[i]) {
+            const fileName = `${rollNumber}_Recording_${i + 1}.wav`;
+            await uploadToDrive(recordings[i], fileName);
+        }
+    }
+
+    alert("All recordings uploaded successfully!");
 });
+
+// Initialize Google API when page loads
+handleClientLoad();
