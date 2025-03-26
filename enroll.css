@@ -105,3 +105,13 @@ audio {
     50% { transform: scale(1.05); }
     100% { transform: scale(1); }
 }
+.sentence-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 8px;
+}
+.upload-status {
+    margin-left: 10px;
+    color: #666;
+}
