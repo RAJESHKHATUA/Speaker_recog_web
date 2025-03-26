@@ -1,7 +1,6 @@
 // ================== CONFIGURATION ==================
-const DRIVE_FOLDER_ID = "https://drive.google.com/drive/folders/1TR6jpCe9hFchsU-H8eJBeKoz9Uh_2aez?usp=drive_link"; // Replace with your folder ID
-const ACCESS_TOKEN = "ya29.a0AeXRPp56-o1x-mcXSPPg3ih8gVHrIlF6DS8dYyw2J8P7BwgS-YU5JSM5PXDRdcnX2d2xAPIFZhx2lFwnJ9MoWgCrB5B4Bex49Pjsk4oiSIuHF3uTkQMix-X3HadEtA51cDalzo0P5JHQeF4Ky5OjbbZsdFfiGHIa16zhiYVIaCgYKATgSARASFQHGX2MiGS8kepx0Ul2XMFnYtTMWww0175"; // Get this from OAuth Playground
-
+const DRIVE_FOLDER_ID = "1TR6jpCe9hFchsU-H8eJBeKoz9Uh_2aez"; // ONLY the ID part
+const ACCESS_TOKEN = "ya29.a0AeXRPp56-o1x-mcXSPPg3ih8gVHrIlF6DS8dYyw2J8P7BwgS-YU5JSM5PXDRdcnX2d2xAPIFZhx2lFwnJ9MoWgCrB5B4Bex49Pjsk4oiSIuHF3uTkQMix-X3HadEtA51cDalzo0P5JHQeF4Ky5OjbbZsdFfiGHIa16zhiYVIaCgYKATgSARASFQHGX2MiGS8kepx0Ul2XMFnYtTMWww0175"; 
 // ================== SENTENCES DATA ==================
 const sentences = [
 
