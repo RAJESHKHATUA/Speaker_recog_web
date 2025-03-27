@@ -1,43 +1,20 @@
 // ================== CONFIGURATION ==================
-const DRIVE_FOLDER_ID = "1TR6jpCe9hFchsU-H8eJBeKoz9Uh_2aez"; // ONLY the ID part
-const ACCESS_TOKEN = "ya29.a0AeXRPp56-o1x-mcXSPPg3ih8gVHrIlF6DS8dYyw2J8P7BwgS-YU5JSM5PXDRdcnX2d2xAPIFZhx2lFwnJ9MoWgCrB5B4Bex49Pjsk4oiSIuHF3uTkQMix-X3HadEtA51cDalzo0P5JHQeF4Ky5OjbbZsdFfiGHIa16zhiYVIaCgYKATgSARASFQHGX2MiGS8kepx0Ul2XMFnYtTMWww0175"; 
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxV0-STo52IHPtbEeUg4Tr7YBcHnQt1kz33gihabsE6PFpdQM5yyikuZgo0HX57LpTC/exec"; // Replace with your Google Apps Script Web App URL
+
 // ================== SENTENCES DATA ==================
 const sentences = [
-
-"Hello, my name is [Name].",
-"I am [Name], present today.",
-"Yes, I am here.",
-"This is [Name] speaking.",
-"[Name] here, marking my attendance.",
-"Present and ready.",
-"Good morning, my name is [Name].",
-"How are you doing today?",
-"It’s a great day outside.",
-"Can you hear me clearly?",
-"I love learning new things.",
-"Let’s get started with today’s class.",
-"This is just a test sentence.",
-"Please repeat that once again.",
-"I hope everyone is doing well.",
-"The quick brown fox jumps over the lazy dog.",
-"I enjoy listening to music in my free time.",
-"Artificial intelligence is changing the world.",
-"A rolling stone gathers no moss.",
-"Technology is advancing at a rapid pace.",
-"Speech recognition is an interesting field of study.",
-"She sells seashells by the seashore.",
-"A journey of a thousand miles begins with a single step.",
-"My phone number is 9876543210.",
-"The time now is 10:30 AM.",
-"Today’s date is the 5th of March.",
-"I will be 22 years old next year.",
-"Yes.",
-"No.",
-"Okay.",
-"Hmm.",
-"Alright.",
-"Thank you."
-    // ... (keep your original sentences array)
+    "Hello, my name is [Name].",
+    "I am [Name], present today.",
+    "Yes, I am here.",
+    "This is [Name] speaking.",
+    "[Name] here, marking my attendance.",
+    "Present and ready.",
+    "Good morning, my name is [Name].",
+    "How are you doing today?",
+    "It’s a great day outside.",
+    "Can you hear me clearly?",
+    "I love learning new things.",
+    "Let’s get started with today’s class."
 ];
 
 // ================== RECORDING LOGIC ==================
@@ -101,35 +78,6 @@ sentences.forEach((text, index) => {
     });
 });
 
-// ================== DRIVE UPLOAD LOGIC ==================
-async function uploadToDrive(blob, fileName) {
-    const metadata = {
-        name: fileName,
-        mimeType: "audio/wav",
-        parents: [DRIVE_FOLDER_ID]
-    };
-
-    const formData = new FormData();
-    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    formData.append("file", blob);
-
-    try {
-        const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                "Content-Type": "multipart/related"
-            },
-            body: formData
-        });
-        
-        return await response.json();
-    } catch (error) {
-        console.error("Upload failed:", error);
-        throw error;
-    }
-}
-
 // ================== SUBMIT HANDLER ==================
 document.getElementById("submitVoice").addEventListener("click", async () => {
     const rollNumber = prompt("Enter your roll number:");
@@ -137,21 +85,25 @@ document.getElementById("submitVoice").addEventListener("click", async () => {
 
     const submitBtn = document.getElementById("submitVoice");
     submitBtn.disabled = true;
-    submitBtn.textContent = "Saving to Drive...";
+    submitBtn.textContent = "Uploading...";
 
     try {
-        const uploadPromises = recordings.map((blob, index) => {
+        const uploadPromises = recordings.map(async (blob, index) => {
             if (!blob) return Promise.resolve();
-            
-            const fileName = `${rollNumber}_${Date.now()}_recording${index + 1}.wav`;
-            return uploadToDrive(blob, fileName)
-                .then(() => {
+
+            const formData = new FormData();
+            formData.append("rollNumber", rollNumber);
+            formData.append("file", blob, `recording${index + 1}.wav`);
+
+            return fetch(WEB_APP_URL, { method: "POST", body: formData })
+                .then(res => res.json())
+                .then(data => {
                     document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
                 });
         });
 
         await Promise.all(uploadPromises);
-        alert("All recordings saved to Drive!");
+        alert("All recordings saved to Google Drive!");
     } catch (error) {
         alert("Upload failed. Check console.");
     } finally {
