@@ -1,19 +1,9 @@
-// ================== FIREBASE CONFIGURATION ==================
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const storage = firebase.storage();
+// ================== CONFIGURATION ==================
+const WEB_APP_URL = "YOUR_WEB_APP_URL_HERE"; // Replace with your Google Apps Script Web App URL
 
 // ================== SENTENCES DATA ==================
 const sentences = [
+
     "Hello, my name is [Name].",
     "I am [Name], present today.",
     "Yes, I am here.",
@@ -25,7 +15,29 @@ const sentences = [
     "It’s a great day outside.",
     "Can you hear me clearly?",
     "I love learning new things.",
-    "Let’s get started with today’s class."
+    "Let’s get started with today’s class.",
+    "This is just a test sentence.",
+    "Please repeat that once again.",
+    "I hope everyone is doing well.",
+    "The quick brown fox jumps over the lazy dog.",
+    "I enjoy listening to music in my free time.",
+    "Artificial intelligence is changing the world.",
+    "A rolling stone gathers no moss.",
+    "Technology is advancing at a rapid pace.",
+    "Speech recognition is an interesting field of study.",
+    "She sells seashells by the seashore.",
+    "A journey of a thousand miles begins with a single step.",
+    "My phone number is 9876543210.",
+    "The time now is 10:30 AM.",
+    "Today’s date is the 5th of March.",
+    "I will be 22 years old next year.",
+    "Yes.",
+    "No.",
+    "Okay.",
+    "Hmm.",
+    "Alright.",
+    "Thank you."
+    
 ];
 
 // ================== RECORDING LOGIC ==================
@@ -102,22 +114,21 @@ document.getElementById("submitVoice").addEventListener("click", async () => {
         const uploadPromises = recordings.map(async (blob, index) => {
             if (!blob) return Promise.resolve();
 
-            const fileName = `recordings/${rollNumber}/recording${index + 1}.wav`;
-            const storageRef = storage.ref(fileName);
+            const formData = new FormData();
+            formData.append("rollNumber", rollNumber);
+            formData.append("file", blob, `recording${index + 1}.wav`);
 
-            return storageRef.put(blob).then(snapshot => {
-                return snapshot.ref.getDownloadURL();
-            }).then(downloadURL => {
-                document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
-                console.log(`Uploaded: ${downloadURL}`);
-            });
+            return fetch(WEB_APP_URL, { method: "POST", body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
+                });
         });
 
         await Promise.all(uploadPromises);
-        alert("All recordings saved to Firebase Storage!");
+        alert("All recordings saved to Google Drive!");
     } catch (error) {
         alert("Upload failed. Check console.");
-        console.error("Upload Error:", error);
     } finally {
         submitBtn.textContent = "Submit Recordings";
         submitBtn.disabled = false;
