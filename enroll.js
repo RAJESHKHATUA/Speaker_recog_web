@@ -1,5 +1,6 @@
-// ================== CONFIGURATION ==================
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxV0-STo52IHPtbEeUg4Tr7YBcHnQt1kz33gihabsE6PFpdQM5yyikuZgo0HX57LpTC/exec"; // Replace with your Google Apps Script Web App URL
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-storage.js";
+
+const storage = window.firebaseStorage; // Access Firebase storage from enroll.html
 
 // ================== SENTENCES DATA ==================
 const sentences = [
@@ -78,7 +79,7 @@ sentences.forEach((text, index) => {
     });
 });
 
-// ================== SUBMIT HANDLER ==================
+// ================== SUBMIT HANDLER (UPLOAD TO FIREBASE) ==================
 document.getElementById("submitVoice").addEventListener("click", async () => {
     const rollNumber = prompt("Enter your roll number:");
     if (!rollNumber) return;
@@ -91,23 +92,26 @@ document.getElementById("submitVoice").addEventListener("click", async () => {
         const uploadPromises = recordings.map(async (blob, index) => {
             if (!blob) return Promise.resolve();
 
-            const formData = new FormData();
-            formData.append("rollNumber", rollNumber);
-            formData.append("file", blob, `recording${index + 1}.wav`);
+            const filename = `voice_samples/${rollNumber}_recording${index + 1}.wav`;
+            const storageRef = ref(storage, filename);
 
-            return fetch(WEB_APP_URL, { method: "POST", body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
-                });
+            try {
+                const snapshot = await uploadBytes(storageRef, blob);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                console.log(`Uploaded: ${filename}, URL: ${downloadURL}`);
+                document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
+            } catch (error) {
+                console.error(`Error uploading ${filename}:`, error);
+            }
         });
 
         await Promise.all(uploadPromises);
-        alert("All recordings saved to Google Drive!");
+        alert("All recordings saved to Firebase Storage!");
     } catch (error) {
+        console.error("Upload failed:", error);
         alert("Upload failed. Check console.");
     } finally {
-        submitBtn.textContent = "Submit Recordings";
+        submitBtn.textContent = "✅ Uploaded";
         submitBtn.disabled = false;
     }
 });
