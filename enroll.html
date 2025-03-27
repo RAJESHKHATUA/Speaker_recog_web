@@ -19,12 +19,30 @@
     </div>
 
     <!-- Firebase Configuration -->
-    
+    <script type="module">
+        // Import Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getStorage } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-storage.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvYHTwLWgD1B5KH4nTWKTSNzyqpiiS7jQ",
+            authDomain: "spwaker-8c71b.firebaseapp.com",
+            projectId: "spwaker-8c71b",
+            storageBucket: "spwaker-8c71b.appspot.com",  // Fixed incorrect storageBucket URL
+            messagingSenderId: "708942651699",
+            appId: "1:708942651699:web:505d6375499023b7cbde46"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+
+        // Make storage available globally
+        window.firebaseStorage = storage;
+    </script>
 
     <!-- Main Enrollment Script -->
-    <script src="enroll.js"></script>
+    <script src="enroll.js" type="module"></script>
 </body>
 </html>
-
-
-

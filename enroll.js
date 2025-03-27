@@ -1,5 +1,16 @@
-// ================== CONFIGURATION ==================
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxV0-STo52IHPtbEeUg4Tr7YBcHnQt1kz33gihabsE6PFpdQM5yyikuZgo0HX57LpTC/exec"; // Replace with your Google Apps Script Web App URL
+// ================== FIREBASE CONFIGURATION ==================
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
 
 // ================== SENTENCES DATA ==================
 const sentences = [
@@ -91,21 +102,22 @@ document.getElementById("submitVoice").addEventListener("click", async () => {
         const uploadPromises = recordings.map(async (blob, index) => {
             if (!blob) return Promise.resolve();
 
-            const formData = new FormData();
-            formData.append("rollNumber", rollNumber);
-            formData.append("file", blob, `recording${index + 1}.wav`);
+            const fileName = `recordings/${rollNumber}/recording${index + 1}.wav`;
+            const storageRef = storage.ref(fileName);
 
-            return fetch(WEB_APP_URL, { method: "POST", body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
-                });
+            return storageRef.put(blob).then(snapshot => {
+                return snapshot.ref.getDownloadURL();
+            }).then(downloadURL => {
+                document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
+                console.log(`Uploaded: ${downloadURL}`);
+            });
         });
 
         await Promise.all(uploadPromises);
-        alert("All recordings saved to Google Drive!");
+        alert("All recordings saved to Firebase Storage!");
     } catch (error) {
         alert("Upload failed. Check console.");
+        console.error("Upload Error:", error);
     } finally {
         submitBtn.textContent = "Submit Recordings";
         submitBtn.disabled = false;
