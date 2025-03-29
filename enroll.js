@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('sentencesGrid');
     const submitBtn = document.getElementById('submitVoice');
 
+    // Clear and create sentence cards
     grid.innerHTML = '';
     sentences.forEach((text, index) => {
         const card = document.createElement('div');
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeRecorder = null;
     let mediaStream = null;
 
+    // Handle recording buttons
     grid.addEventListener('click', async (e) => {
         const startBtn = e.target.closest('.startBtn');
         const stopBtn = e.target.closest('.stopBtn');
@@ -53,7 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Start new recording
                 mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true }
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
                 });
 
                 const recorder = new MediaRecorder(mediaStream);
@@ -95,65 +100,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ================== SUPABASE UPLOAD ==================
-    const supabase = supabase.createClient(
-        "https://zbbheudcarcgdgnwrxim.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI"
-    );
-
-    submitBtn.addEventListener('click', async () => {
-        console.log("✅ Submit button clicked!"); // Debug log
-
+    // ================== SUBMIT HANDLER ==================
+    submitBtn.addEventListener('click', () => {
         if (!recordings.every(r => r !== null)) {
-            alert("⚠️ Please record all sentences first!");
+            alert("Please record all sentences first!");
             return;
         }
 
-        const rollNumber = prompt("Enter your roll number:");
-        if (!rollNumber?.trim()) {
-            alert("⚠️ Roll number is required!");
-            return;
-        }
-
-        console.log(`🚀 Uploading recordings for: ${rollNumber}`);
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Uploading...";
-
-        try {
-            console.log("✅ Starting uploads...");
-
-            for (let i = 0; i < recordings.length; i++) {
-                const fileName = `recordings/${rollNumber}/sentence_${i+1}.wav`;
-                console.log(`📤 Uploading: ${fileName}`);
-
-                const { error } = await supabase.storage
-                    .from('recordings')
-                    .upload(fileName, recordings[i], {
-                        contentType: 'audio/wav',
-                        upsert: true
-                    });
-
-                if (error) {
-                    console.error("❌ Upload failed:", error);
-                    throw error;
-                }
-
-                document.querySelectorAll('.status')[i].textContent = 'Uploaded ✅';
-            }
-
-            alert("🎉 All recordings uploaded successfully!");
-        } catch (error) {
-            console.error("❌ Upload error:", error);
-            alert("Upload failed. Check console.");
-        } finally {
-            submitBtn.textContent = "✅ Submit all Recordings";
-            submitBtn.disabled = false;
-        }
+        // Without Supabase, we'll just show the recordings
+        console.log("All recordings completed:", recordings);
+        alert("All recordings are ready! (Supabase upload removed)");
+        
+        // For testing: Play all recordings
+        document.querySelectorAll('.preview').forEach(audio => {
+            audio.play().catch(e => console.log("Playback error:", e));
+        });
     });
 
+    // ================== HELPER FUNCTIONS ==================
     function checkCompletion() {
         const allRecorded = recordings.every(r => r !== null);
-        console.log("🟢 Check completion:", { allRecorded, recordings }); // Debug log
         submitBtn.disabled = !allRecorded;
     }
 });
