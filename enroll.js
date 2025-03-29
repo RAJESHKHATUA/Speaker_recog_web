@@ -1,9 +1,5 @@
-// ================== CONFIGURATION ==================
-const WEB_APP_URL = "YOUR_WEB_APP_URL_HERE"; // Replace with your Google Apps Script Web App URL
-
-// ================== SENTENCES DATA ==================
+// Sentences Data
 const sentences = [
-
     "Hello, my name is [Name].",
     "I am [Name], present today.",
     "Yes, I am here.",
@@ -37,10 +33,9 @@ const sentences = [
     "Hmm.",
     "Alright.",
     "Thank you."
-    
 ];
 
-// ================== RECORDING LOGIC ==================
+// Recording State
 let recordings = Array(sentences.length).fill(null);
 let activeRecorder = null;
 
@@ -53,41 +48,41 @@ sentences.forEach((text, index) => {
         <div class="controls">
             <button class="startBtn" data-index="${index}">🎤 Start</button>
             <button class="stopBtn" data-index="${index}" disabled>⏹️ Stop</button>
-            <span class="upload-status"></span>
         </div>
         <audio class="preview" controls hidden></audio>
     `;
     document.getElementById("sentencesGrid").appendChild(card);
 
+    // Elements
     const startBtn = card.querySelector(".startBtn");
     const stopBtn = card.querySelector(".stopBtn");
     const audioPreview = card.querySelector(".preview");
-    const status = card.querySelector(".upload-status");
 
+    // Recording Handlers
     startBtn.addEventListener("click", async () => {
         try {
+            // Request microphone access
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(stream);
             const chunks = [];
 
-            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: "audio/wav" });
                 recordings[index] = blob;
                 audioPreview.src = URL.createObjectURL(blob);
                 audioPreview.hidden = false;
-                status.textContent = "✅ Recorded";
                 checkCompletion();
-                stream.getTracks().forEach(track => track.stop());
             };
 
             recorder.start();
             activeRecorder = recorder;
             startBtn.disabled = true;
             stopBtn.disabled = false;
-            status.textContent = "● Recording...";
+            startBtn.classList.add("recording");
         } catch (err) {
-            alert("Microphone access required!");
+            console.error("Error accessing microphone:", err);
+            alert("Microphone access is required for recording. Please allow permission.");
         }
     });
 
@@ -97,51 +92,35 @@ sentences.forEach((text, index) => {
             activeRecorder = null;
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            startBtn.classList.remove("recording");
         }
     });
 });
 
-// ================== SUBMIT HANDLER ==================
-document.getElementById("submitVoice").addEventListener("click", async () => {
-    const rollNumber = prompt("Enter your roll number:");
-    if (!rollNumber) return;
-
-    const submitBtn = document.getElementById("submitVoice");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Uploading...";
-
-    try {
-        const uploadPromises = recordings.map(async (blob, index) => {
-            if (!blob) return Promise.resolve();
-
-            const formData = new FormData();
-            formData.append("rollNumber", rollNumber);
-            formData.append("file", blob, `recording${index + 1}.wav`);
-
-            return fetch(WEB_APP_URL, { method: "POST", body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
-                });
-        });
-
-        await Promise.all(uploadPromises);
-        alert("All recordings saved to Google Drive!");
-    } catch (error) {
-        alert("Upload failed. Check console.");
-    } finally {
-        submitBtn.textContent = "Submit Recordings";
-        submitBtn.disabled = false;
-    }
-});
-
-// ================== HELPER FUNCTIONS ==================
+// Check Completion
 function checkCompletion() {
-    const complete = recordings.every(r => r !== null);
+    const complete = recordings.every((r) => r !== null);
     document.getElementById("submitVoice").disabled = !complete;
 }
 
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Voice enrollment system ready");
+// Submit Handler
+document.getElementById("submitVoice").addEventListener("click", () => {
+    const formData = new FormData();
+    recordings.forEach((blob, index) => {
+        formData.append(`recording-${index}`, blob, `recording-${index}.wav`);
+    });
+
+    // Simulated submission
+    fetch("/submit-recordings", {
+        method: "POST",
+        body: formData,
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            alert("All recordings submitted successfully!");
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+            alert("Failed to submit recordings. Please try again.");
+        });
 });
