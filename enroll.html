@@ -2,22 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Enroll - Voice Enrollment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Enrollment</title>
     <link rel="stylesheet" href="enroll.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
-        <h2>Voice Enrollment</h2>
-        <p class="instruction">Read each phrase aloud clearly:</p>
-        <div id="sentencesGrid"></div>
-        <div class="submit-section">
-            <button id="submitVoice" disabled>✅ Submit all Recordings</button>
-        </div>
+        <h1>Voice Enrollment</h1>
+        <p class="instruction">Read each sentence aloud clearly:</p>
+        <div id="sentencesGrid" class="sentences-grid"></div>
+        <button id="submitVoice" disabled>Submit All Recordings</button>
     </div>
-
-    <script defer src="enroll.js"></script>
+    <script src="enroll.js"></script>
 </body>
 </html>
