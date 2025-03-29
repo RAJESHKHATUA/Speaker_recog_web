@@ -1,13 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ===== CONFIGURATION =====
-    const SUPABASE_URL = "https://zbbheudcarcgdgnwrxim.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI";
-    
-    // ===== ELEMENTS =====
-    const grid = document.getElementById('sentencesGrid');
-    const submitBtn = document.getElementById('submitVoice');
-    
-    // ===== SENTENCES =====
     const sentences = [
         "Hello, my name is [Name].",
         "I am [Name], present today.",
@@ -16,15 +8,26 @@ document.addEventListener('DOMContentLoaded', () => {
         "[Name] here, marking my attendance."
     ];
 
+    // ===== ELEMENTS =====
+    const grid = document.getElementById('sentencesGrid');
+    const submitBtn = document.getElementById('submitVoice');
+    
     // ===== STATE =====
     let recordings = Array(sentences.length).fill(null);
     let activeRecorder = null;
     let mediaStream = null;
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    const supabase = supabase.createClient(
+        "https://zbbheudcarcgdgnwrxim.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI"
+    );
 
     // ===== INITIALIZE UI =====
-    function initializeUI() {
+    function createSentenceCards() {
+        // Clear existing cards
         grid.innerHTML = '';
+        
+        // Create new cards
         sentences.forEach((text, index) => {
             const card = document.createElement('div');
             card.className = 'sentence-card';
@@ -42,6 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== RECORDING FUNCTIONS =====
+    function setupRecordingListeners() {
+        grid.addEventListener('click', (e) => {
+            const startBtn = e.target.closest('.startBtn');
+            const stopBtn = e.target.closest('.stopBtn');
+            
+            if (startBtn) {
+                const index = parseInt(startBtn.dataset.index);
+                startRecording(index);
+            } else if (stopBtn) {
+                const index = parseInt(stopBtn.dataset.index);
+                stopRecording(index);
+            }
+        });
+    }
+
     async function startRecording(index) {
         try {
             // Stop any existing recording
@@ -50,15 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 mediaStream?.getTracks().forEach(track => track.stop());
             }
 
-            // Get media stream
-            mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true
-                } 
-            });
-
-            // Setup recorder
+            // Start new recording
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(mediaStream);
             const chunks = [];
             
@@ -72,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkCompletion();
             };
 
-            // Start recording
             recorder.start();
             activeRecorder = recorder;
             
@@ -93,15 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
             activeRecorder.stop();
             document.querySelectorAll('.startBtn')[index].disabled = false;
             document.querySelectorAll('.stopBtn')[index].disabled = true;
-            mediaStream?.getTracks().forEach(track => track.stop());
         }
     }
 
     // ===== UPLOAD FUNCTIONS =====
     async function handleSubmit() {
-        console.log('Submit initiated');
-        
-        // Validate recordings
+        // Validate all recordings exist
         if (!recordings.every(r => r !== null)) {
             alert('Please record all sentences first!');
             return;
@@ -113,14 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Update UI
         submitBtn.disabled = true;
         submitBtn.textContent = 'Uploading...';
 
         try {
-            console.log('Starting upload process...');
-            
-            // 1. Ensure bucket exists
+            // Ensure bucket exists
             const { error: bucketError } = await supabase.storage
                 .createBucket('recordings', { public: true });
             
@@ -128,17 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw bucketError;
             }
 
-            // 2. Upload files
+            // Upload recordings
             for (let i = 0; i < recordings.length; i++) {
-                console.log(`Uploading recording ${i+1}...`);
                 const fileName = `recordings/${rollNumber}/sentence_${i+1}.wav`;
-                
                 const { error } = await supabase.storage
                     .from('recordings')
                     .upload(fileName, recordings[i], {
                         contentType: 'audio/wav',
-                        upsert: true,
-                        cacheControl: '3600'
+                        upsert: true
                     });
 
                 if (error) throw error;
@@ -148,11 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             alert('All recordings uploaded successfully!');
         } catch (error) {
-            console.error('Upload failed:', error);
-            alert(`Upload error: ${error.message}`);
+            console.error('Upload error:', error);
+            alert(`Upload failed: ${error.message}`);
         } finally {
             submitBtn.textContent = 'Submit All Recordings';
-            submitBtn.disabled = !recordings.every(r => r !== null);
+            submitBtn.disabled = false;
         }
     }
 
@@ -165,25 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.disabled = !recordings.every(r => r !== null);
     }
 
-    // ===== EVENT LISTENERS =====
-    function setupEventListeners() {
-        // Recording controls
-        grid.addEventListener('click', (e) => {
-            const startBtn = e.target.closest('.startBtn');
-            const stopBtn = e.target.closest('.stopBtn');
-            
-            if (startBtn) {
-                startRecording(parseInt(startBtn.dataset.index));
-            } else if (stopBtn) {
-                stopRecording(parseInt(stopBtn.dataset.index));
-            }
-        });
-
-        // Submit button
-        submitBtn.addEventListener('click', handleSubmit);
-    }
-
     // ===== INITIALIZE APP =====
-    initializeUI();
-    setupEventListeners();
+    createSentenceCards();
+    setupRecordingListeners();
+    submitBtn.addEventListener('click', handleSubmit);
 });
