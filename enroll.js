@@ -1,4 +1,10 @@
-// Sentences Data
+// ================== SUPABASE CONFIGURATION ==================
+const SUPABASE_URL = "https://zbbheudcarcgdgnwrxim.supabase.co";  // Replace with actual Supabase URL
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI";  // Replace with actual Supabase anon key
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ================== SENTENCES DATA ==================
 const sentences = [
     "Hello, my name is [Name].",
     "I am [Name], present today.",
@@ -35,7 +41,7 @@ const sentences = [
     "Thank you."
 ];
 
-// Recording State
+// ================== RECORDING LOGIC ==================
 let recordings = Array(sentences.length).fill(null);
 let activeRecorder = null;
 
@@ -48,41 +54,41 @@ sentences.forEach((text, index) => {
         <div class="controls">
             <button class="startBtn" data-index="${index}">🎤 Start</button>
             <button class="stopBtn" data-index="${index}" disabled>⏹️ Stop</button>
+            <span class="upload-status"></span>
         </div>
         <audio class="preview" controls hidden></audio>
     `;
     document.getElementById("sentencesGrid").appendChild(card);
 
-    // Elements
     const startBtn = card.querySelector(".startBtn");
     const stopBtn = card.querySelector(".stopBtn");
     const audioPreview = card.querySelector(".preview");
+    const status = card.querySelector(".upload-status");
 
-    // Recording Handlers
     startBtn.addEventListener("click", async () => {
         try {
-            // Request microphone access
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(stream);
             const chunks = [];
 
-            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: "audio/wav" });
                 recordings[index] = blob;
                 audioPreview.src = URL.createObjectURL(blob);
                 audioPreview.hidden = false;
+                status.textContent = "✅ Recorded";
                 checkCompletion();
+                stream.getTracks().forEach(track => track.stop());
             };
 
             recorder.start();
             activeRecorder = recorder;
             startBtn.disabled = true;
             stopBtn.disabled = false;
-            startBtn.classList.add("recording");
+            status.textContent = "● Recording...";
         } catch (err) {
-            console.error("Error accessing microphone:", err);
-            alert("Microphone access is required for recording. Please allow permission.");
+            alert("Microphone access required!");
         }
     });
 
@@ -92,35 +98,50 @@ sentences.forEach((text, index) => {
             activeRecorder = null;
             startBtn.disabled = false;
             stopBtn.disabled = true;
-            startBtn.classList.remove("recording");
         }
     });
 });
 
-// Check Completion
+// ================== SUBMIT HANDLER (UPLOAD TO SUPABASE) ==================
+document.getElementById("submitVoice").addEventListener("click", async () => {
+    const rollNumber = prompt("Enter your roll number:");
+    if (!rollNumber) return;
+
+    const submitBtn = document.getElementById("submitVoice");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Uploading...";
+
+    try {
+        const uploadPromises = recordings.map(async (blob, index) => {
+            if (!blob) return Promise.resolve();
+
+            const fileName = `recordings/${rollNumber}/recording${index + 1}.wav`;
+            const { data, error } = await supabase.storage
+                .from("recordings") // Your Supabase storage bucket name
+                .upload(fileName, blob, { contentType: "audio/wav" });
+
+            if (error) throw error;
+            document.querySelectorAll(".upload-status")[index].textContent = "✅ Uploaded";
+        });
+
+        await Promise.all(uploadPromises);
+        alert("All recordings saved to Supabase Storage!");
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Upload failed. Check console.");
+    } finally {
+        submitBtn.textContent = "✅ Submit all Recordings";
+        submitBtn.disabled = false;
+    }
+});
+
+// ================== HELPER FUNCTIONS ==================
 function checkCompletion() {
-    const complete = recordings.every((r) => r !== null);
+    const complete = recordings.every(r => r !== null);
     document.getElementById("submitVoice").disabled = !complete;
 }
 
-// Submit Handler
-document.getElementById("submitVoice").addEventListener("click", () => {
-    const formData = new FormData();
-    recordings.forEach((blob, index) => {
-        formData.append(`recording-${index}`, blob, `recording-${index}.wav`);
-    });
-
-    // Simulated submission
-    fetch("/submit-recordings", {
-        method: "POST",
-        body: formData,
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            alert("All recordings submitted successfully!");
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            alert("Failed to submit recordings. Please try again.");
-        });
+// Initialize app
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Voice enrollment system ready with Supabase");
 });
