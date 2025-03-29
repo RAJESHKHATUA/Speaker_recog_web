@@ -8,10 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ================== UI SETUP ==================
     const grid = document.getElementById('sentencesGrid');
-    const submitBtn = document.getElementById('submitVoice');
-    
-    // Clear and rebuild grid to ensure no duplicates
-    grid.innerHTML = '';
+    grid.innerHTML = ''; // Clear existing content
+
+    // Create all sentence cards
     sentences.forEach((text, index) => {
         const card = document.createElement('div');
         card.className = 'sentence-card';
@@ -20,152 +19,96 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="controls">
                 <button class="startBtn" data-index="${index}">🎤 Start</button>
                 <button class="stopBtn" data-index="${index}" disabled>⏹️ Stop</button>
-                <span class="status">Not recorded</span>
+                <span class="status">Ready</span>
             </div>
             <audio class="preview" controls hidden></audio>
         `;
         grid.appendChild(card);
     });
 
-    // ================== SUPABASE INIT ==================
-    const supabase = supabase.createClient(
-        "https://zbbheudcarcgdgnwrxim.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI"
-    );
-
     // ================== RECORDING LOGIC ==================
     let recordings = Array(sentences.length).fill(null);
     let activeRecorder = null;
     let mediaStream = null;
 
-    document.querySelectorAll('.startBtn').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            const index = parseInt(this.dataset.index);
-            const card = this.closest('.sentence-card');
-            const stopBtn = card.querySelector('.stopBtn');
-            const status = card.querySelector('.status');
-            const audio = card.querySelector('.preview');
-
-            try {
-                // Stop any existing recording
-                if (activeRecorder?.state !== 'inactive') {
-                    activeRecorder?.stop();
-                    mediaStream?.getTracks().forEach(track => track.stop());
-                }
-
-                // Start new recording
-                mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { 
-                        echoCancellation: true,
-                        noiseSuppression: true 
-                    } 
-                });
-                
-                const recorder = new MediaRecorder(mediaStream);
-                const chunks = [];
-                
-                recorder.ondataavailable = e => chunks.push(e.data);
-                recorder.onstop = () => {
-                    recordings[index] = new Blob(chunks, { type: 'audio/wav' });
-                    audio.src = URL.createObjectURL(recordings[index]);
-                    audio.hidden = false;
-                    status.textContent = 'Recorded ✅';
-                    checkCompletion();
-                };
-
-                recorder.start();
-                activeRecorder = recorder;
-                
-                // Update UI
-                this.disabled = true;
-                stopBtn.disabled = false;
-                status.textContent = 'Recording...';
-                
-            } catch (err) {
-                console.error("Recording failed:", err);
-                status.textContent = 'Recording failed ❌';
-                alert("Could not access microphone. Please check permissions.");
-            }
-        });
+    // Add event listeners using event delegation
+    grid.addEventListener('click', (e) => {
+        const startBtn = e.target.closest('.startBtn');
+        const stopBtn = e.target.closest('.stopBtn');
+        
+        if (startBtn) {
+            handleStartRecording(startBtn);
+        } else if (stopBtn) {
+            handleStopRecording(stopBtn);
+        }
     });
 
-    document.querySelectorAll('.stopBtn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const card = this.closest('.sentence-card');
-            const startBtn = card.querySelector('.startBtn');
-            
+    async function handleStartRecording(button) {
+        const index = parseInt(button.dataset.index);
+        const card = button.closest('.sentence-card');
+        const stopBtn = card.querySelector('.stopBtn');
+        const status = card.querySelector('.status');
+        const audio = card.querySelector('.preview');
+
+        try {
+            // Stop any existing recording
             if (activeRecorder?.state !== 'inactive') {
-                activeRecorder.stop();
-                startBtn.disabled = false;
-                this.disabled = true;
+                activeRecorder?.stop();
                 mediaStream?.getTracks().forEach(track => track.stop());
             }
-        });
-    });
 
-    // ================== UPLOAD HANDLER ==================
-    submitBtn.addEventListener('click', async () => {
-        if (!recordings.every(r => r !== null)) {
-            alert("Please record all sentences first!");
-            return;
+            // Start new recording
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(mediaStream);
+            const chunks = [];
+            
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                recordings[index] = new Blob(chunks, { type: 'audio/wav' });
+                audio.src = URL.createObjectURL(recordings[index]);
+                audio.hidden = false;
+                status.textContent = 'Recorded ✅';
+                checkCompletion();
+            };
+
+            recorder.start();
+            activeRecorder = recorder;
+            
+            // Update UI
+            button.disabled = true;
+            stopBtn.disabled = false;
+            status.textContent = 'Recording...';
+            
+        } catch (err) {
+            console.error("Recording failed:", err);
+            status.textContent = 'Failed ❌';
+            alert("Could not access microphone. Please check permissions.");
         }
+    }
 
-        const rollNumber = prompt("Enter your roll number:");
-        if (!rollNumber?.trim()) {
-            alert("Roll number is required!");
-            return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Uploading...";
+    function handleStopRecording(button) {
+        const card = button.closest('.sentence-card');
+        const startBtn = card.querySelector('.startBtn');
         
-        try {
-            // 1. Ensure bucket exists
-            const { error: bucketError } = await supabase.storage
-                .createBucket('recordings', { public: true });
-            
-            if (bucketError && !bucketError.message.includes('already exists')) {
-                throw bucketError;
-            }
-
-            // 2. Upload each recording
-            for (let i = 0; i < recordings.length; i++) {
-                const fileName = `recordings/${rollNumber}/sentence_${i+1}.wav`;
-                const { error } = await supabase.storage
-                    .from('recordings')
-                    .upload(fileName, recordings[i], {
-                        contentType: 'audio/wav',
-                        upsert: true,
-                        cacheControl: '3600'
-                    });
-
-                if (error) throw error;
-                
-                document.querySelectorAll('.status')[i].textContent = 'Uploaded ✅';
-            }
-
-            alert("All recordings uploaded successfully!");
-            
-        } catch (error) {
-            console.error("Upload error:", error);
-            
-            // Specific error messages
-            if (error.message.includes('The resource already exists')) {
-                alert("Files already exist for this roll number!");
-            } else if (error.message.includes('JWT expired')) {
-                alert("Session expired. Please refresh the page.");
-            } else {
-                alert(`Upload failed: ${error.message}`);
-            }
-            
-        } finally {
-            submitBtn.textContent = "Submit All Recordings";
-            submitBtn.disabled = !recordings.every(r => r !== null);
+        if (activeRecorder?.state !== 'inactive') {
+            activeRecorder.stop();
+            startBtn.disabled = false;
+            button.disabled = true;
+            mediaStream?.getTracks().forEach(track => track.stop());
         }
+    }
+
+    // ================== SUPABASE INIT & UPLOAD ==================
+    const supabase = supabase.createClient(
+        "https://zbbheudcarcgdgnwrxim.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI"
+    );
+
+    document.getElementById('submitVoice').addEventListener('click', async () => {
+        // ... (keep your existing upload logic)
     });
 
-    // ================== HELPER FUNCTIONS ==================
     function checkCompletion() {
-        submitBtn.disabled = !recordings.every(r => r !== null);
+        document.getElementById('submitVoice').disabled = !recordings.every(r => r !== null);
     }
 });
