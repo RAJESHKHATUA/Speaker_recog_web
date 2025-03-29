@@ -1,24 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // ================== SENTENCES DATA ==================
+    // ========== FIRST CREATE UI ==========
     const sentences = [
         "Hello, my name is [Name].",
-        "I am [Name], present today.",
+        "I am [Name], present today.", 
         "Yes, I am here.",
         "This is [Name] speaking.",
         "[Name] here, marking my attendance."
     ];
 
-    // ================== UI SETUP ==================
     const grid = document.getElementById('sentencesGrid');
     const submitBtn = document.getElementById('submitVoice');
-
+    
     // Clear and create sentence cards
     grid.innerHTML = '';
     sentences.forEach((text, index) => {
         const card = document.createElement('div');
         card.className = 'sentence-card';
         card.innerHTML = `
-            <p class="sentence-text">${text}</p>
+            <p>${text}</p>
             <div class="controls">
                 <button class="startBtn" data-index="${index}">🎤 Start</button>
                 <button class="stopBtn" data-index="${index}" disabled>⏹️ Stop</button>
@@ -29,12 +28,38 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.appendChild(card);
     });
 
-    // ================== RECORDING LOGIC ==================
+    // ========== STATE MANAGEMENT ==========
     let recordings = Array(sentences.length).fill(null);
     let activeRecorder = null;
     let mediaStream = null;
+    let supabaseEnabled = false;
 
-    // Handle recording buttons
+    // ========== INITIALIZE SUPABASE (NON-BLOCKING) ==========
+    setTimeout(async () => {
+        try {
+            const supabase = supabase.createClient(
+                "https://zbbheudcarcgdgnwrxim.supabase.co",
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmhldWRjYXJjZ2RnbndyeGltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTc5MzIsImV4cCI6MjA1ODczMzkzMn0.VHW2KYkMB7PtLVNmP9fUDJY0oERCjPEgh8cVtLxljWI"
+            );
+            
+            // Test connection
+            const { data, error } = await supabase
+                .from('nonexistent_table')
+                .select('*')
+                .limit(1);
+                
+            if (!error || error.message.includes('relation "nonexistent_table" does not exist')) {
+                supabaseEnabled = true;
+                console.log("Supabase connected successfully");
+            } else {
+                console.warn("Supabase limited functionality:", error.message);
+            }
+        } catch (err) {
+            console.warn("Supabase initialization failed, using local mode only:", err);
+        }
+    }, 100); // Delayed initialization
+
+    // ========== RECORDING FUNCTIONS ==========
     grid.addEventListener('click', async (e) => {
         const startBtn = e.target.closest('.startBtn');
         const stopBtn = e.target.closest('.stopBtn');
@@ -47,20 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const audio = card.querySelector('.preview');
 
             try {
-                // Stop any existing recording
                 if (activeRecorder?.state === 'recording') {
                     activeRecorder.stop();
                     mediaStream?.getTracks().forEach(track => track.stop());
                 }
 
-                // Start new recording
-                mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true
-                    } 
-                });
-
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const recorder = new MediaRecorder(mediaStream);
                 const chunks = [];
 
@@ -75,51 +92,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 recorder.start();
                 activeRecorder = recorder;
-
-                // Update UI
+                
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
                 status.textContent = 'Recording...';
-
+                
             } catch (err) {
                 console.error("Recording error:", err);
                 status.textContent = 'Error ❌';
-                alert("Microphone access required! Please allow permissions.");
+                alert("Microphone access required!");
             }
         }
         else if (stopBtn) {
-            const card = stopBtn.closest('.sentence-card');
-            const startBtn = card.querySelector('.startBtn');
-
             if (activeRecorder?.state === 'recording') {
                 activeRecorder.stop();
-                startBtn.disabled = false;
                 stopBtn.disabled = true;
-                mediaStream?.getTracks().forEach(track => track.stop());
+                stopBtn.closest('.sentence-card').querySelector('.startBtn').disabled = false;
             }
         }
     });
 
-    // ================== SUBMIT HANDLER ==================
-    submitBtn.addEventListener('click', () => {
+    // ========== SUBMIT HANDLER ==========
+    submitBtn.addEventListener('click', async () => {
         if (!recordings.every(r => r !== null)) {
             alert("Please record all sentences first!");
             return;
         }
 
-        // Without Supabase, we'll just show the recordings
-        console.log("All recordings completed:", recordings);
-        alert("All recordings are ready! (Supabase upload removed)");
+        const rollNumber = prompt("Enter your roll number:");
+        if (!rollNumber?.trim()) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Processing...";
+
+        if (supabaseEnabled) {
+            try {
+                const folderPath = `recordings/${rollNumber}/`;
+                
+                // Upload recordings
+                for (let i = 0; i < recordings.length; i++) {
+                    const fileName = `${folderPath}recording_${i+1}.wav`;
+                    const { error } = await supabase.storage
+                        .from('recordings')
+                        .upload(fileName, recordings[i], {
+                            contentType: 'audio/wav',
+                            upsert: true
+                        });
+                    
+                    if (error) throw error;
+                    document.querySelectorAll('.status')[i].textContent = 'Uploaded ✅';
+                }
+                
+                alert("Uploaded to Supabase successfully!");
+            } catch (error) {
+                console.error("Supabase upload failed:", error);
+                saveLocally(recordings, rollNumber);
+            }
+        } else {
+            saveLocally(recordings, rollNumber);
+        }
         
-        // For testing: Play all recordings
-        document.querySelectorAll('.preview').forEach(audio => {
-            audio.play().catch(e => console.log("Playback error:", e));
-        });
+        submitBtn.textContent = "Submit All Recordings";
+        submitBtn.disabled = false;
     });
 
-    // ================== HELPER FUNCTIONS ==================
+    // ========== FALLBACK FUNCTIONS ==========
+    function saveLocally(recordings, rollNumber) {
+        // Create zip or download files
+        recordings.forEach((blob, i) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${rollNumber}_recording_${i+1}.wav`;
+            a.click();
+        });
+        
+        alert("Saved recordings locally (Supabase unavailable)");
+    }
+
     function checkCompletion() {
-        const allRecorded = recordings.every(r => r !== null);
-        submitBtn.disabled = !allRecorded;
+        submitBtn.disabled = !recordings.every(r => r !== null);
     }
 });
