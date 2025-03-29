@@ -1,6 +1,5 @@
-// Complete working solution with guaranteed clickable buttons
 document.addEventListener('DOMContentLoaded', () => {
-    // ================== SAMPLE SENTENCES (5 only) ==================
+    // ================== SENTENCES DATA ==================
     const sentences = [
         "Hello, my name is [Name].",
         "I am [Name], present today.",
@@ -41,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const stopBtn = e.target.closest('.stopBtn');
         
         if (startBtn) {
-            const index = startBtn.dataset.index;
+            const index = parseInt(startBtn.dataset.index);
             const card = startBtn.closest('.sentence-card');
             const stopBtn = card.querySelector('.stopBtn');
             const status = card.querySelector('.status');
@@ -55,7 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Start new recording
-                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
                 const recorder = new MediaRecorder(mediaStream);
                 const chunks = [];
                 
@@ -102,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     submitBtn.addEventListener('click', async () => {
+        console.log("Submit button clicked"); // Debug log
+        
+        // Verify all recordings exist
         if (!recordings.every(r => r !== null)) {
             alert("Please record all sentences first!");
             return;
@@ -117,7 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = "Uploading...";
 
         try {
-            // Ensure bucket exists
+            console.log("Attempting to create bucket..."); // Debug log
+            
+            // 1. Ensure bucket exists
             const { error: bucketError } = await supabase.storage
                 .createBucket('recordings', { public: true });
             
@@ -125,14 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw bucketError;
             }
 
-            // Upload recordings
+            console.log("Bucket ready, starting uploads..."); // Debug log
+            
+            // 2. Upload each recording
             for (let i = 0; i < recordings.length; i++) {
+                console.log(`Uploading recording ${i+1}...`); // Debug log
+                
                 const fileName = `recordings/${rollNumber}/sentence_${i+1}.wav`;
                 const { error } = await supabase.storage
                     .from('recordings')
                     .upload(fileName, recordings[i], {
                         contentType: 'audio/wav',
-                        upsert: true
+                        upsert: true,
+                        cacheControl: '3600'
                     });
 
                 if (error) throw error;
@@ -140,17 +155,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.status')[i].textContent = 'Uploaded ✅';
             }
 
-            alert("Upload successful!");
+            alert("All recordings uploaded successfully!");
         } catch (error) {
-            console.error("Upload error:", error);
-            alert(`Upload failed: ${error.message}`);
+            console.error("Upload error details:", {
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+            
+            let errorMessage = "Upload failed. Please try again.";
+            if (error.message.includes('JWT expired')) {
+                errorMessage = "Session expired. Please refresh the page.";
+            } else if (error.message.includes('already exists')) {
+                errorMessage = "Recordings for this roll number already exist.";
+            }
+            
+            alert(errorMessage);
         } finally {
-            submitBtn.textContent = "Submit Recordings";
-            submitBtn.disabled = false;
+            submitBtn.textContent = "Submit All Recordings";
+            submitBtn.disabled = !recordings.every(r => r !== null);
         }
     });
 
     function checkCompletion() {
-        submitBtn.disabled = !recordings.every(r => r !== null);
+        const allRecorded = recordings.every(r => r !== null);
+        console.log("Check completion:", { allRecorded, recordings }); // Debug log
+        submitBtn.disabled = !allRecorded;
     }
 });
