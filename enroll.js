@@ -46,17 +46,21 @@ let recordings = Array(sentences.length).fill(null);
 let activeRecorder = null;
 let mediaStream = null;
 
-// Create Sentence Cards
+// Initialize the app when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     const sentencesGrid = document.getElementById("sentencesGrid");
     
+    // Clear any existing content
+    sentencesGrid.innerHTML = '';
+    
+    // Create a card for each sentence
     sentences.forEach((text, index) => {
         const card = document.createElement("div");
         card.className = "sentence-card";
         card.innerHTML = `
             <p class="sentence-text">${text}</p>
             <div class="controls">
-                <button class="startBtn" data-index="${index}">🎤 Start</button>
+                <button class="startBtn" data-index="${index}">🎤 Start Recording</button>
                 <button class="stopBtn" data-index="${index}" disabled>⏹️ Stop</button>
                 <span class="upload-status"></span>
             </div>
@@ -74,15 +78,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Stop any existing recording first
                 if (activeRecorder && activeRecorder.state !== 'inactive') {
                     activeRecorder.stop();
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(track => track.stop());
+                    }
                 }
                 
-                // Get new media stream
+                // Get new media stream with better audio quality
                 mediaStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
                         sampleRate: 44100
-                    } 
+                    },
+                    video: false
                 });
                 
                 const recorder = new MediaRecorder(mediaStream);
@@ -98,19 +106,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     checkCompletion();
                 };
 
-                recorder.start();
+                recorder.start(100); // Collect data every 100ms
                 activeRecorder = recorder;
                 
+                // Update UI
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
                 status.textContent = "● Recording...";
-                
-                // Add visual feedback
                 startBtn.classList.add('recording');
                 
             } catch (err) {
                 console.error("Recording error:", err);
-                alert("Microphone access required! Please allow microphone permissions.");
+                alert("Microphone access required! Please allow microphone permissions and try again.");
+                status.textContent = "❌ Recording failed";
             }
         });
 
@@ -131,6 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ================== SUBMIT HANDLER ==================
     document.getElementById("submitVoice").addEventListener("click", async () => {
+        // Validate all recordings are done
+        if (!recordings.every(r => r !== null)) {
+            alert("Please record all sentences before submitting.");
+            return;
+        }
+
         const rollNumber = prompt("Enter your roll number (required):");
         if (!rollNumber || !rollNumber.trim()) {
             alert("Roll number is required for submission.");
@@ -138,31 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const submitBtn = document.getElementById("submitVoice");
+        const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.innerHTML = "Uploading <span class='loading'></span>";
 
         try {
-            // First create a folder for the user
+            // Create user folder in Supabase storage
             const folderPath = `recordings/${rollNumber.trim()}/`;
             
-            // Check if folder exists or create it by uploading a dummy file
-            const dummyFile = new Blob([""], { type: "text/plain" });
-            await supabase.storage
-                .from("recordings")
-                .upload(`${folderPath}.keep`, dummyFile, {
-                    upsert: true
-                });
-
             // Upload all recordings
             const uploadPromises = recordings.map(async (blob, index) => {
                 if (!blob) return;
                 
-                const fileName = `${folderPath}recording_${index + 1}_${Date.now()}.wav`;
+                const fileName = `${folderPath}sentence_${index + 1}.wav`;
                 const { error } = await supabase.storage
                     .from("recordings")
                     .upload(fileName, blob, {
                         contentType: "audio/wav",
-                        upsert: false
+                        upsert: true
                     });
 
                 if (error) throw error;
@@ -172,29 +179,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             await Promise.all(uploadPromises);
-            alert("All recordings have been successfully uploaded to Supabase!");
-            
-            // Reset the UI after successful upload
-            submitBtn.textContent = "✅ Upload Complete";
-            setTimeout(() => {
-                submitBtn.textContent = "Submit all Recordings";
-                submitBtn.disabled = !recordings.every(r => r !== null);
-            }, 3000);
+            alert("All recordings uploaded successfully!");
             
         } catch (error) {
             console.error("Upload error:", error);
-            submitBtn.innerHTML = "⚠️ Upload Failed";
             alert(`Upload failed: ${error.message}`);
-            
-            setTimeout(() => {
-                submitBtn.textContent = "Submit all Recordings";
-                submitBtn.disabled = !recordings.every(r => r !== null);
-            }, 2000);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
     });
 });
 
-// ================== HELPER FUNCTIONS ==================
+// Check if all recordings are complete
 function checkCompletion() {
     const complete = recordings.every(r => r !== null);
     document.getElementById("submitVoice").disabled = !complete;
