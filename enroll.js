@@ -130,7 +130,7 @@ document.getElementById("submitVoice").addEventListener("click", async () => {
         console.error("Upload failed:", error);
         alert("Upload failed. Check console.");
     } finally {
-        submitBtn.textContent = "✅ Submit Recordings";
+        submitBtn.textContent = "✅ Submit all Recordings";
         submitBtn.disabled = false;
     }
 });
