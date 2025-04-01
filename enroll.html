@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice Enrollment</title>
     <link rel="stylesheet" href="enroll.css">
+    <!-- Load Supabase FIRST -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Then load audio-specific client -->
+    <script src="supabase-client.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>Voice Enrollment</h1>
+        <div id="connectionStatus" class="status-banner"></div>
         <p class="instruction">Read each sentence aloud clearly:</p>
         <div id="sentencesGrid" class="sentences-grid"></div>
         <button id="submitVoice" disabled>Submit All Recordings</button>
